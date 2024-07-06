@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounts Query</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .results table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .results table, .results th, .results td {
+            border: 1px solid #ddd;
+        }
+        .results th, .results td {
+            padding: 8px;
+            text-align: left;
+        }
+        .results th {
+            background-color: #f4f4f4;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 10px;
+            margin: 0 5px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .pagination button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Accounts Query</h1>
+        <form id="upload-form" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="csv_file">Upload CSV</label>
+                <input type="file" id="csv_file" name="csv_file" accept=".csv">
+            </div>
+            <button type="button" onclick="uploadCSV()">Upload CSV</button>
+        </form>
+        <div class="form-group">
+            <label for="min_balance">Min Balance</label>
+            <input type="number" id="min_balance" name="min_balance" step="0.01">
+        </div>
+        <div class="form-group">
+            <label for="max_balance">Max Balance</label>
+            <input type="number" id="max_balance" name="max_balance" step="0.01">
+        </div>
+        <div class="form-group">
+            <label for="consumer_name">Consumer Name</label>
+            <input type="text" id="consumer_name" name="consumer_name">
+        </div>
+        <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="">Select Status</option>
+                <option value="IN_COLLECTION">IN_COLLECTION</option>
+                <option value="PAID_IN_FULL">PAID_IN_FULL</option>
+                <option value="INACTIVE">INACTIVE</option>
+            </select>
+        </div>
+        <button onclick="queryAccounts()">Query Accounts</button>
+        <div class="results" id="results"></div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+
+        function uploadCSV() {
+            const form = document.getElementById('upload-form');
+            const formData = new FormData(form);
+            
+            fetch('/api/upload_csv', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading CSV:', error);
+            });
+        }
+
+        function queryAccounts(page = 1) {
+            currentPage = page;
+            const minBalance = document.getElementById('min_balance').value;
+            const maxBalance = document.getElementById('max_balance').value;
+            const consumerName = document.getElementById('consumer_name').value;
+            const status = document.getElementById('status').value;
+
+            let url = `/api/accounts?page=${page}&`;
+            if (minBalance) url += `min_balance=${minBalance}&`;
+            if (maxBalance) url += `max_balance=${maxBalance}&`;
+            if (consumerName) url += `consumer_name=${consumerName}&`;
+            if (status) url += `status=${status}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsDiv = document.getElementById('results');
+                    const paginationDiv = document.getElementById('pagination');
+                    if (data.data.length > 0) {
+                        let table = '<table><thead><tr><th>Client Reference No</th><th>Balance</th><th>Status</th><th>Consumer Name</th><th>Consumer Address</th><th>SSN</th></tr></thead><tbody>';
+                        data.data.forEach(account => {
+                            table += `<tr>
+                                <td>${account.client_reference_no}</td>
+                                <td>${account.balance}</td>
+                                <td>${account.status}</td>
+                                <td>${account.consumer_name}</td>
+                                <td>${account.consumer_address}</td>
+                                <td>${account.ssn}</td>
+                            </tr>`;
+                        });
+                        table += '</tbody></table>';
+                        resultsDiv.innerHTML = table;
+
+                        totalPages = data.pagination.total_pages;
+                        let paginationButtons = '';
+                        if (data.pagination.has_previous) {
+                            paginationButtons += `<button onclick="queryAccounts(${currentPage - 1})">Previous</button>`;
+                        }
+                        paginationButtons += `<span> Page ${currentPage} of ${totalPages} </span>`;
+                        if (data.pagination.has_next) {
+                            paginationButtons += `<button onclick="queryAccounts(${currentPage + 1})">Next</button>`;
+                        }
+                        paginationDiv.innerHTML = paginationButtons;
+                    } else {
+                        resultsDiv.innerHTML = '<p>No accounts found.</p>';
+                        paginationDiv.innerHTML = '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error querying accounts:', error);
+                });
+        }
+
+    </script>
+</body>
+</html>
