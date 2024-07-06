@@ -25,7 +25,22 @@ SECRET_KEY = 'django-insecure-=!z7y#w)ch1vzhhc=2y@i-4($uuo*x-n=p!vdpeo!s$cxhi0n0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['ec2-18-188-127-234.us-east-2.compute.amazonaws.com', 'localhost']
+
+# Database settings (example for SQLite)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'myprojectdb',
+        'USER': 'myprojectuser',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '',
+    }
+}
+
+
+STATIC_ROOT = BASE_DIR / 'static/'
 
 
 # Application definition
